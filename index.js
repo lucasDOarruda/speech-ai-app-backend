@@ -5,12 +5,24 @@ const { OpenAI } = require('openai');
 
 const app = express();
 
-// ✅ CORS settings for local + deployed frontend
+// ✅ Allow common dev ports and GitHub Pages dynamically
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:63356',
+  'http://localhost:58605',
+  'https://lucasdoarruda.github.io'
+];
+
 app.use(cors({
-  origin: [
-    'http://localhost:58605',                          // Local Vite dev server
-    'https://lucasdoarruda.github.io',                // GitHub Pages
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, Postman)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS: ' + origin));
+    }
+  },
   credentials: true,
 }));
 
@@ -29,14 +41,8 @@ app.post('/chat', async (req, res) => {
     const chatCompletion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
-        {
-          role: 'system',
-          content: 'You are a speech coach helping improve pronunciation.',
-        },
-        {
-          role: 'user',
-          content: message,
-        },
+        { role: 'system', content: 'You are a speech coach helping improve pronunciation.' },
+        { role: 'user', content: message },
       ],
     });
 
@@ -50,12 +56,13 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-// ✅ Use dynamic port (important for Render!)
+// ✅ Health check
+app.get('/', (req, res) => {
+  res.send('👋 Speech AI backend is live and ready!');
+});
+
+// ✅ Start server
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
-});
-
-app.get('/', (req, res) => {
-  res.send('👋 Speech AI backend is live and ready!');
 });
